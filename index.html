@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="책 가로·세로·내지두께를 입력하면 각양장·환양장 표지 재단 사이즈를 자동 계산합니다.">
+  <meta property="og:title" content="양장 표지 사이즈 제너레이터">
+  <meta property="og:description" content="각양장·환양장 표지 재단 사이즈 자동 계산기 — Roseshaker">
+  <title>양장 표지 사이즈 제너레이터</title>
+  <style>
+    :root {
+      --bg: #f9f7f5;
+      --card: #ffffff;
+      --border: #e4e0db;
+      --accent: #2c2c2c;
+      --muted: #7a7470;
+      --tag: #e8e2db;
+      --spine-color: #c9bfb5;
+      --cover-color: #ede8e3;
+      --glue-color: #f3ede7;
+      --highlight: #4a3728;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Apple SD Gothic Neo', sans-serif;
+      background: var(--bg);
+      color: var(--accent);
+      min-height: 100vh;
+      padding: 48px 20px 100px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+    header .brand {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    header p {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .container { max-width: 840px; margin: 0 auto; }
+
+    /* ── 탭 ── */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 13px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--card);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      transition: all 0.15s ease;
+      text-align: center;
+      letter-spacing: -0.01em;
+    }
+    .tab-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #fff;
+    }
+    .tab-btn .sub {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      margin-top: 2px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── 카드 ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 32px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 22px;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 7px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .field label em {
+      font-style: normal;
+      font-weight: 400;
+      font-size: 11px;
+      color: #bbb;
+      margin-left: 4px;
+    }
+    .field input {
+      width: 100%;
+      padding: 11px 14px;
+      font-size: 18px;
+      font-weight: 600;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      background: #fdfcfb;
+      color: var(--accent);
+      outline: none;
+      transition: border-color 0.15s;
+      -moz-appearance: textfield;
+    }
+    .field input::-webkit-outer-spin-button,
+    .field input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .field input:focus { border-color: var(--accent); background: #fff; }
+    .field .unit { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+    /* 환양장 슬라이더 */
+    .slider-section { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .slider-field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--muted); margin-bottom: 10px; letter-spacing: 0.02em;
+    }
+    .slider-field label em { font-style: normal; font-weight: 400; font-size: 11px; color: #bbb; margin-left: 4px; }
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    .slider-row input[type=range] {
+      flex: 1; height: 3px; cursor: pointer;
+      accent-color: var(--accent);
+    }
+    .slider-val { font-size: 16px; font-weight: 700; min-width: 42px; text-align: right; color: var(--accent); }
+    .hint { font-size: 11px; color: #b0a8a0; margin-top: 7px; line-height: 1.6; }
+
+    /* 주석 박스 */
+    .note-box {
+      background: #fdf9f6;
+      border: 1px solid #eaddd3;
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+    .note-box strong { color: var(--accent); }
+
+    /* 결과 */
+    .result-section { display: none; }
+    .result-section.visible { display: block; }
+
+    .result-card {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 14px;
+      padding: 28px 32px;
+      margin-bottom: 16px;
+    }
+    .result-card .result-label {
+      font-size: 11px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 22px;
+    }
+    .result-nums {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+    .result-num .lbl { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
+    .result-num .val {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1;
+    }
+    .result-num .val span { font-size: 20px; font-weight: 400; color: rgba(255,255,255,0.55); margin-left: 3px; }
+
+    .copy-row { display: flex; gap: 8px; margin-top: 20px; }
+    .action-btn {
+      padding: 10px 18px;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      border-radius: 8px;
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.15s;
+    }
+    .action-btn:hover { background: rgba(255,255,255,0.1); }
+
+    /* 분해 */
+    .breakdown-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 28px;
+      margin-bottom: 16px;
+    }
+    .breakdown-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .formula-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 13px;
+      margin-bottom: 9px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid #f0ece8;
+    }
+    .formula-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .formula-row .f-lbl { color: var(--muted); min-width: 76px; font-size: 12px; font-weight: 500; }
+    .formula-row .f-eq { color: #ccc; }
+    .formula-row .f-parts { color: var(--accent); font-weight: 400; flex: 1; }
+    .formula-row .f-val { font-weight: 800; color: var(--highlight); font-size: 14px; }
+
+    /* 도식 */
+    .diagram-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+    }
+    .diagram-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    /* 푸터 */
+    footer {
+      text-align: center;
+      margin-top: 64px;
+      font-size: 11px;
+      color: #c0b8b0;
+      letter-spacing: 0.08em;
+    }
+    footer a { color: #b0a8a0; text-decoration: none; border-bottom: 1px solid #e0d8d0; }
+
+    /* 반응형 */
+    @media (max-width: 600px) {
+      body { padding: 32px 16px 80px; }
+      header h1 { font-size: 22px; }
+      .card { padding: 20px; }
+      .fields { grid-template-columns: 1fr; gap: 12px; }
+      .slider-section { grid-template-columns: 1fr; }
+      .result-nums { grid-template-columns: 1fr; gap: 20px; }
+      .result-num .val { font-size: 34px; }
+      .breakdown-card { padding: 18px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Roseshaker · 제작 도구</div>
+  <h1>양장 표지 사이즈 제너레이터</h1>
+  <p>책 가로·세로·내지 두께를 입력하면 표지 재단 사이즈를 자동 계산합니다.<br>
+  각양장(Square) / 환양장(Round) 두 방식을 모두 지원합니다.</p>
+</header>
+
+<div class="container">
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('gak')">
+      각양장제본
+      <span class="sub">Square Hardcover</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('hwan')">
+      환양장제본
+      <span class="sub">Round Hardcover</span>
+    </button>
+  </div>
+
+  <!-- ────────── 각양장 ────────── -->
+  <div id="tab-gak">
+    <div class="card">
+      <div class="card-title">책 기본 정보</div>
+      <div class="fields">
+        <div class="field">
+          <label>책 가로 <em>내지 기준</em></label>
+          <input type="number" id="gak-w" placeholder="148" min="50" max="600" inputmode="decimal" oninput="calcGak()">
+          <div class="unit">mm</div>
+        </div>
+        <div class="field">
+          <label>책 세로 <em>내지 기준</em></label>
+          <input type="number" id="gak-h" placeholder="210" min="50" max="900" inputmode="decimal" oninput="calcGak()">
+          <div class="unit">mm</div>
+        </div>
+        <div class="field">
+          <label>내지 두께 <em>완성 기준</em></label>
+          <input type="number" id="gak-t" placeholder="20" min="1" max="200" inputmode="decimal" oninput="calcGak()">
+          <div class="unit">mm</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <strong>각양장 적용 공식</strong> (양장 표지 적용사이즈 2015.6.12 기준)<br>
+      앞·뒷표지 가로 = 책가로 + <strong>8mm</strong>(미소 포함) &nbsp;|&nbsp;
+      책등 = 내지두께 + <strong>4mm</strong> &nbsp;|&nbsp;
+      표지 세로 = 책세로 + <strong>6mm</strong> &nbsp;|&nbsp;
+      풀칠 = 사방 <strong>15mm</strong>
+    </div>
+
+    <div id="gak-result" class="result-section">
+      <div class="result-card">
+        <div class="result-label">각양장 표지 재단 사이즈</div>
+        <div class="result-nums">
+          <div class="result-num">
+            <div class="lbl">전체 가로 (폭)</div>
+            <div class="val" id="gak-total-w">—<span>mm</span></div>
+          </div>
+          <div class="result-num">
+            <div class="lbl">전체 세로 (높이)</div>
+            <div class="val" id="gak-total-h">—<span>mm</span></div>
+          </div>
+        </div>
+        <div class="copy-row">
+          <button class="action-btn" onclick="copyResult('gak')">결과 복사</button>
+          <button class="action-btn" onclick="resetTab('gak')">초기화</button>
+        </div>
+      </div>
+
+      <div class="breakdown-card">
+        <div class="breakdown-title">가로 분해</div>
+        <div class="formula-row">
+          <span class="f-lbl">풀칠 (좌)</span><span class="f-eq">=</span>
+          <span class="f-parts">15mm</span><span class="f-val">15mm</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">뒤표지</span><span class="f-eq">=</span>
+          <span class="f-parts">책가로 + 8mm</span><span class="f-val" id="gak-back">—</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">책등</span><span class="f-eq">=</span>
+          <span class="f-parts">내지두께 + 4mm</span><span class="f-val" id="gak-spine">—</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">앞표지</span><span class="f-eq">=</span>
+          <span class="f-parts">책가로 + 8mm</span><span class="f-val" id="gak-front">—</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">풀칠 (우)</span><span class="f-eq">=</span>
+          <span class="f-parts">15mm</span><span class="f-val">15mm</span>
+        </div>
+      </div>
+
+      <div class="breakdown-card">
+        <div class="breakdown-title">세로 분해</div>
+        <div class="formula-row">
+          <span class="f-lbl">풀칠 (상)</span><span class="f-eq">=</span>
+          <span class="f-parts">15mm</span><span class="f-val">15mm</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">표지 세로</span><span class="f-eq">=</span>
+          <span class="f-parts">책세로 + 6mm</span><span class="f-val" id="gak-panel-h">—</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">풀칠 (하)</span><span class="f-eq">=</span>
+          <span class="f-parts">15mm</span><span class="f-val">15mm</span>
+        </div>
+      </div>
+
+      <div class="diagram-card">
+        <div class="diagram-title">표지 구조 도식</div>
+        <div id="gak-svg-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────── 환양장 ────────── -->
+  <div id="tab-hwan" style="display:none">
+    <div class="card">
+      <div class="card-title">책 기본 정보</div>
+      <div class="fields">
+        <div class="field">
+          <label>책 가로 <em>내지 기준</em></label>
+          <input type="number" id="hwan-w" placeholder="148" min="50" max="600" inputmode="decimal" oninput="calcHwan()">
+          <div class="unit">mm</div>
+        </div>
+        <div class="field">
+          <label>책 세로 <em>내지 기준</em></label>
+          <input type="number" id="hwan-h" placeholder="210" min="50" max="900" inputmode="decimal" oninput="calcHwan()">
+          <div class="unit">mm</div>
+        </div>
+        <div class="field">
+          <label>내지 두께 <em>완성 기준</em></label>
+          <input type="number" id="hwan-t" placeholder="20" min="1" max="200" inputmode="decimal" oninput="calcHwan()">
+          <div class="unit">mm</div>
+        </div>
+      </div>
+
+      <div class="slider-section">
+        <div class="slider-field">
+          <label>책등합지두께 <em>표지 판재 두께</em></label>
+          <div class="slider-row">
+            <input type="range" id="hwan-board" min="1" max="6" step="0.5" value="2.5" oninput="syncSlider('hwan-board','hwan-board-val','mm'); calcHwan()">
+            <span class="slider-val" id="hwan-board-val">2.5mm</span>
+          </div>
+          <div class="hint">얇은 책 1~2mm / 중간 2~3mm / 두꺼운 책 3~4mm</div>
+        </div>
+        <div class="slider-field">
+          <label>책등 여유값 <em>표 참고 (5~8mm)</em></label>
+          <div class="slider-row">
+            <input type="range" id="hwan-extra" min="5" max="8" step="1" value="6" oninput="syncSlider('hwan-extra','hwan-extra-val','mm'); calcHwan()">
+            <span class="slider-val" id="hwan-extra-val">6mm</span>
+          </div>
+          <div class="hint">내지두께 + 여유값 = 책등 폭. 제본소 지시에 따라 선택.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <strong>환양장 적용 공식</strong> (양장 표지 적용사이즈 2015.6.12 기준)<br>
+      앞·뒷표지 가로 = 책가로 + <strong>3mm</strong> + 책등합지두께 + 미소 <strong>8mm</strong> &nbsp;|&nbsp;
+      책등 = 내지두께 + <strong>5~8mm</strong>(표 참고) &nbsp;|&nbsp;
+      표지 세로 = 책세로 + <strong>6mm</strong> &nbsp;|&nbsp;
+      풀칠 = 사방 <strong>15mm</strong>
+    </div>
+
+    <div id="hwan-result" class="result-section">
+      <div class="result-card">
+        <div class="result-label">환양장 표지 재단 사이즈</div>
+        <div class="result-nums">
+          <div class="result-num">
+            <div class="lbl">전체 가로 (폭)</div>
+            <div class="val" id="hwan-total-w">—<span>mm</span></div>
+          </div>
+          <div class="result-num">
+            <div class="lbl">전체 세로 (높이)</div>
+            <div class="val" id="hwan-total-h">—<span>mm</span></div>
+          </div>
+        </div>
+        <div class="copy-row">
+          <button class="action-btn" onclick="copyResult('hwan')">결과 복사</button>
+          <button class="action-btn" onclick="resetTab('hwan')">초기화</button>
+        </div>
+      </div>
+
+      <div class="breakdown-card">
+        <div class="breakdown-title">가로 분해</div>
+        <div class="formula-row">
+          <span class="f-lbl">풀칠 (좌)</span><span class="f-eq">=</span>
+          <span class="f-parts">15mm</span><span class="f-val">15mm</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">뒤표지</span><span class="f-eq">=</span>
+          <span class="f-parts" id="hwan-back-parts">책가로 + 3mm + 합지 + 8mm</span>
+          <span class="f-val" id="hwan-back">—</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">책등</span><span class="f-eq">=</span>
+          <span class="f-parts" id="hwan-spine-parts">내지두께 + Xmm</span>
+          <span class="f-val" id="hwan-spine">—</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">앞표지</span><span class="f-eq">=</span>
+          <span class="f-parts" id="hwan-front-parts">책가로 + 3mm + 합지 + 8mm</span>
+          <span class="f-val" id="hwan-front">—</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">풀칠 (우)</span><span class="f-eq">=</span>
+          <span class="f-parts">15mm</span><span class="f-val">15mm</span>
+        </div>
+      </div>
+
+      <div class="breakdown-card">
+        <div class="breakdown-title">세로 분해</div>
+        <div class="formula-row">
+          <span class="f-lbl">풀칠 (상)</span><span class="f-eq">=</span>
+          <span class="f-parts">15mm</span><span class="f-val">15mm</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">표지 세로</span><span class="f-eq">=</span>
+          <span class="f-parts">책세로 + 6mm</span><span class="f-val" id="hwan-panel-h">—</span>
+        </div>
+        <div class="formula-row">
+          <span class="f-lbl">풀칠 (하)</span><span class="f-eq">=</span>
+          <span class="f-parts">15mm</span><span class="f-val">15mm</span>
+        </div>
+      </div>
+
+      <div class="diagram-card">
+        <div class="diagram-title">표지 구조 도식</div>
+        <div id="hwan-svg-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  Made by <a href="https://roseshaker.kr" target="_blank">Roseshaker</a> &nbsp;·&nbsp;
+  양장 표지 적용사이즈 가이드 2015.6.12 기준
+</footer>
+
+<script>
+  /* ── 탭 전환 ── */
+  function switchTab(tab) {
+    document.getElementById('tab-gak').style.display  = tab === 'gak'  ? '' : 'none';
+    document.getElementById('tab-hwan').style.display = tab === 'hwan' ? '' : 'none';
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', (tab === 'gak' && i === 0) || (tab === 'hwan' && i === 1));
+    });
+  }
+
+  /* ── 슬라이더 동기화 ── */
+  function syncSlider(inputId, labelId, unit) {
+    const v = parseFloat(document.getElementById(inputId).value);
+    document.getElementById(labelId).textContent = v + unit;
+  }
+
+  /* ── 소수 포맷 ── */
+  function fmt(n) { return Math.round(n * 10) / 10; }
+
+  /* ── 각양장 계산 ── */
+  function calcGak() {
+    const w = parseFloat(document.getElementById('gak-w').value);
+    const h = parseFloat(document.getElementById('gak-h').value);
+    const t = parseFloat(document.getElementById('gak-t').value);
+    const res = document.getElementById('gak-result');
+    if (!w || !h || !t || w <= 0 || h <= 0 || t <= 0) { res.classList.remove('visible'); return; }
+
+    const panelW = w + 8;
+    const spine  = t + 4;
+    const panelH = h + 6;
+    const totalW = 15 + panelW + spine + panelW + 15;
+    const totalH = 15 + panelH + 15;
+
+    set('gak-total-w', `${fmt(totalW)}<span>mm</span>`);
+    set('gak-total-h', `${fmt(totalH)}<span>mm</span>`);
+    setText('gak-back',    `${fmt(panelW)}mm`);
+    setText('gak-spine',   `${fmt(spine)}mm`);
+    setText('gak-front',   `${fmt(panelW)}mm`);
+    setText('gak-panel-h', `${fmt(panelH)}mm`);
+
+    res.classList.add('visible');
+    drawDiagram('gak-svg-wrap', panelW, spine, panelW, panelH, 15);
+  }
+
+  /* ── 환양장 계산 ── */
+  function calcHwan() {
+    const w     = parseFloat(document.getElementById('hwan-w').value);
+    const h     = parseFloat(document.getElementById('hwan-h').value);
+    const t     = parseFloat(document.getElementById('hwan-t').value);
+    const board = parseFloat(document.getElementById('hwan-board').value);
+    const extra = parseInt(document.getElementById('hwan-extra').value);
+    const res   = document.getElementById('hwan-result');
+    if (!w || !h || !t || w <= 0 || h <= 0 || t <= 0) { res.classList.remove('visible'); return; }
+
+    const panelW = w + 3 + board + 8;
+    const spine  = t + extra;
+    const panelH = h + 6;
+    const totalW = 15 + panelW + spine + panelW + 15;
+    const totalH = 15 + panelH + 15;
+
+    set('hwan-total-w', `${fmt(totalW)}<span>mm</span>`);
+    set('hwan-total-h', `${fmt(totalH)}<span>mm</span>`);
+    setText('hwan-back-parts',  `책가로+3mm + 합지(${board}mm) + 미소8mm`);
+    setText('hwan-front-parts', `책가로+3mm + 합지(${board}mm) + 미소8mm`);
+    setText('hwan-spine-parts', `내지두께 + ${extra}mm`);
+    setText('hwan-back',    `${fmt(panelW)}mm`);
+    setText('hwan-spine',   `${fmt(spine)}mm`);
+    setText('hwan-front',   `${fmt(panelW)}mm`);
+    setText('hwan-panel-h', `${fmt(panelH)}mm`);
+
+    res.classList.add('visible');
+    drawDiagram('hwan-svg-wrap', panelW, spine, panelW, panelH, 15);
+  }
+
+  function set(id, html) { document.getElementById(id).innerHTML = html; }
+  function setText(id, t) { document.getElementById(id).textContent = t; }
+
+  /* ── SVG 도식 ── */
+  function drawDiagram(targetId, backW, spineW, frontW, coverH, glue) {
+    const S = 0.62;
+    const totalW = glue + backW + spineW + frontW + glue;
+    const totalH = glue + coverH + glue;
+    const svgW = Math.max(totalW * S + 48, 360);
+    const svgH = totalH * S + 72;
+
+    const gx = glue * S, bw = backW * S, sw = spineW * S;
+    const fw = frontW * S, gh = glue * S, ph = coverH * S;
+    const tw = totalW * S, th = totalH * S;
+
+    const r = (x,y,w,h,fill,stroke) =>
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1"/>`;
+    const t = (x,y,s,anchor,size,color,weight) =>
+      `<text x="${x}" y="${y}" text-anchor="${anchor||'middle'}" font-size="${size||10}" fill="${color||'#777'}" font-weight="${weight||'normal'}" font-family="Helvetica Neue,Arial,sans-serif">${s}</text>`;
+    const tick = (x,y,w,label,sz) => {
+      const m = x + w/2;
+      return `<line x1="${x}" y1="${y}" x2="${x+w}" y2="${y}" stroke="#bbb" stroke-width="1"/>
+              <line x1="${x}" y1="${y}" x2="${x}" y2="${y-5}" stroke="#bbb" stroke-width="1"/>
+              <line x1="${x+w}" y1="${y}" x2="${x+w}" y2="${y-5}" stroke="#bbb" stroke-width="1"/>
+              ${t(m, y+13, label, 'middle', sz||9, '#888')}`;
+    };
+
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH + 16}" viewBox="0 0 ${svgW} ${svgH + 16}">`;
+
+    // 배경 전체 (풀칠 포함)
+    svg += r(0, 0, tw, th, '#f0ebe5', '#d9d1c8');
+    // 풀칠 좌우 영역
+    svg += r(0, 0, gx, th, '#e8ddd4', '#d0c5bc');
+    svg += r(tw-gx, 0, gx, th, '#e8ddd4', '#d0c5bc');
+    // 뒤표지
+    svg += r(gx, gh, bw, ph, '#ddd6ce', '#c0b8af');
+    // 책등
+    svg += r(gx+bw, gh, sw, ph, '#b5aba0', '#9a9088');
+    // 앞표지
+    svg += r(gx+bw+sw, gh, fw, ph, '#ddd6ce', '#c0b8af');
+
+    // 내부 라벨
+    svg += t(gx+bw/2,       gh+ph/2+4, '뒤표지', 'middle', 11, '#5a504a');
+    if (sw > 14) svg += t(gx+bw+sw/2, gh+ph/2+4, '책등', 'middle', sw>22?10:8, '#3d3028', '600');
+    svg += t(gx+bw+sw+fw/2, gh+ph/2+4, '앞표지', 'middle', 11, '#5a504a');
+    if (gx > 10) {
+      svg += t(gx/2, th/2, '풀칠', 'middle', 8, '#9a8e86');
+      svg += t(tw-gx/2, th/2, '풀칠', 'middle', 8, '#9a8e86');
+    }
+
+    // 하단 치수
+    const dy = th + 8;
+    svg += tick(0, dy, gx, '15', 8);
+    svg += tick(gx, dy, bw, fmt(backW)+'mm', 9);
+    svg += tick(gx+bw, dy, sw, fmt(spineW)+'mm', 9);
+    svg += tick(gx+bw+sw, dy, fw, fmt(frontW)+'mm', 9);
+    svg += tick(tw-gx, dy, gx, '15', 8);
+
+    // 전체 가로 치수
+    const fy = th + 50;
+    svg += `<line x1="0" y1="${fy}" x2="${tw}" y2="${fy}" stroke="#999" stroke-width="1" stroke-dasharray="3,3"/>`;
+    svg += t(tw/2, fy+13, `총 가로 ${fmt(totalW)}mm`, 'middle', 10, '#333', '700');
+
+    // 세로 치수 (우측)
+    const rx = tw + 14;
+    svg += `<line x1="${rx}" y1="${gh}" x2="${rx}" y2="${gh+ph}" stroke="#bbb" stroke-width="1"/>`;
+    svg += `<line x1="${rx-4}" y1="${gh}" x2="${rx}" y2="${gh}" stroke="#bbb" stroke-width="1"/>`;
+    svg += `<line x1="${rx-4}" y1="${gh+ph}" x2="${rx}" y2="${gh+ph}" stroke="#bbb" stroke-width="1"/>`;
+    svg += t(rx+5, gh+ph/2+4, `${fmt(coverH)}mm`, 'start', 9, '#888');
+
+    svg += '</svg>';
+    document.getElementById(targetId).innerHTML = svg;
+  }
+
+  /* ── 복사 ── */
+  function copyResult(tab) {
+    const tw = document.getElementById(tab+'-total-w').textContent.replace('mm','').trim();
+    const th = document.getElementById(tab+'-total-h').textContent.replace('mm','').trim();
+    const label = tab === 'gak' ? '각양장' : '환양장';
+    navigator.clipboard.writeText(`[${label} 표지 재단 사이즈]\n가로: ${tw}mm\n세로: ${th}mm`).then(() => {
+      const btn = document.querySelector(`#tab-${tab} .action-btn`);
+      btn.textContent = '복사됨 ✓';
+      setTimeout(() => btn.textContent = '결과 복사', 1600);
+    });
+  }
+
+  function resetTab(tab) {
+    const ids = tab === 'gak'
+      ? ['gak-w','gak-h','gak-t']
+      : ['hwan-w','hwan-h','hwan-t'];
+    ids.forEach(id => document.getElementById(id).value = '');
+    document.getElementById(tab+'-result').classList.remove('visible');
+  }
+</script>
+</body>
+</html>
