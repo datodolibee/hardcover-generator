@@ -408,6 +408,41 @@
     }
     .ghost-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+    /* 판형 프리셋 */
+    .preset-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+    .preset-btn {
+      padding: 8px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.12s;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      position: relative;
+    }
+    .preset-btn:hover { border-color: #b0a098; background: #fff; }
+    .preset-btn.active-preset { border-color: var(--accent); background: #fff; }
+    .preset-btn .p-top { display: flex; align-items: baseline; gap: 5px; }
+    .preset-btn .p-code { font-size: 12px; font-weight: 800; color: var(--accent); letter-spacing: -0.01em; }
+    .preset-btn .p-name { font-size: 9px; color: var(--muted); }
+    .preset-btn .p-size { font-size: 10.5px; font-weight: 600; color: var(--accent); letter-spacing: -0.01em; }
+    .preset-btn .p-use { font-size: 9px; color: #b8b0a8; line-height: 1.4; margin-top: 1px; }
+
     /* PDF 액션 버튼 */
     .action-tile-group {
       display: flex;
@@ -477,6 +512,12 @@
       <button class="tab-btn" onclick="switchTab('hwan')">
         환양장제본 <span class="sub">Round</span>
       </button>
+    </div>
+
+    <!-- 판형 프리셋 -->
+    <div id="preset-section">
+      <div class="preset-label">판형 프리셋</div>
+      <div class="preset-grid" id="preset-grid"></div>
     </div>
 
     <!-- 각양장 입력 -->
@@ -639,6 +680,41 @@
 </div><!-- /app-body -->
 
 <script>
+  /* ── 판형 프리셋 데이터 ── */
+  const PRESETS = [
+    { code: 'A5',   name: '국판',    w: 148, h: 210, use: '에세이 · 소설 · 단행본' },
+    { code: '신국판', name: '신국판',  w: 152, h: 225, use: '인문 · 경제 · 교양서' },
+    { code: 'B5',   name: '4×6배판', w: 182, h: 257, use: '교재 · 수험서 · 자기계발' },
+    { code: 'A4',   name: '국배판',  w: 210, h: 297, use: '잡지 · 카탈로그 · 보고서' },
+    { code: 'B6',   name: '4×6판',  w: 128, h: 188, use: '문고판 · 포켓 소설 · 수첩' },
+    { code: '크라운', name: '크라운판', w: 176, h: 248, use: '실용서 · 자기계발서' },
+  ];
+
+  /* ── 프리셋 그리드 렌더 ── */
+  function renderPresets() {
+    const grid = document.getElementById('preset-grid');
+    grid.innerHTML = PRESETS.map((p, i) => `
+      <button class="preset-btn" id="preset-${i}" onclick="applyPreset(${p.w}, ${p.h}, ${i})" title="${p.name}  ${p.w}×${p.h}mm">
+        <div class="p-top">
+          <span class="p-code">${p.code}</span>
+          <span class="p-name">${p.name}</span>
+        </div>
+        <span class="p-size">${p.w} × ${p.h} mm</span>
+        <span class="p-use">${p.use}</span>
+      </button>`).join('');
+  }
+
+  /* ── 프리셋 적용 ── */
+  function applyPreset(w, h, idx) {
+    // 활성 하이라이트
+    document.querySelectorAll('.preset-btn').forEach((b, i) => b.classList.toggle('active-preset', i === idx));
+    // 현재 탭 필드 채우기
+    const prefix = currentTab;
+    document.getElementById(prefix + '-w').value = w;
+    document.getElementById(prefix + '-h').value = h;
+    if (currentTab === 'gak') calcGak(); else calcHwan();
+  }
+
   /* ── 상태 ── */
   let currentTab = 'gak';
   let lastCalc = null; // { panelW, spine, panelH, glue, totalW, totalH, tab }
@@ -651,6 +727,7 @@
     document.querySelectorAll('.tab-btn').forEach((b, i) => {
       b.classList.toggle('active', (tab === 'gak' && i === 0) || (tab === 'hwan' && i === 1));
     });
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active-preset'));
     showEmpty();
   }
 
@@ -1055,8 +1132,12 @@
       document.getElementById('hwan-extra').value = '6';
       document.getElementById('hwan-extra-val').textContent = '6mm';
     }
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active-preset'));
     showEmpty();
   }
+
+  /* ── 초기화 ── */
+  renderPresets();
 
   /* ── AI 템플릿 SVG 내보내기 ── */
   function exportTemplate() {
