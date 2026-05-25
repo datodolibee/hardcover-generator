@@ -408,6 +408,40 @@
     }
     .ghost-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+    /* PDF 액션 버튼 */
+    .action-tile-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 116px;
+      flex-shrink: 0;
+    }
+    .action-tile {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: all 0.13s;
+      white-space: nowrap;
+      padding: 0 12px;
+    }
+    .action-tile:hover { border-color: var(--accent); background: var(--bg); }
+    .action-tile.primary {
+      background: var(--highlight);
+      border-color: var(--highlight);
+      color: #fff;
+    }
+    .action-tile.primary:hover { opacity: 0.85; }
+
     /* 모바일 */
     @media (max-width: 720px) {
       html, body { height: auto; overflow: auto; }
@@ -571,9 +605,9 @@
           <span class="r-value" id="res-total-h">—<span>mm</span></span>
           <button class="r-copy" onclick="copyVal('res-total-h', this)">복사</button>
         </div>
-        <div class="result-box" style="flex:0.6; background:#3d2b1f;">
-          <span class="r-label">두 값 복사</span>
-          <button onclick="copyBoth()" style="background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 0;line-height:1;">⎘</button>
+        <div class="action-tile-group">
+          <button class="action-tile" onclick="copyBoth()">⎘ 전체 복사</button>
+          <button class="action-tile primary" onclick="exportPDF()">↓ PDF 저장</button>
         </div>
       </div>
 
@@ -711,80 +745,283 @@
     ).join('') + `<span class="bd-eq">=</span><span class="bd-total">${total}</span>`;
   }
 
-  /* ── SVG 도식 ── */
-  function drawDiagram(targetId, backW, spineW, frontW, coverH, glue) {
-    const wrap = document.getElementById(targetId);
-    const W = wrap.clientWidth  || 600;
-    const H = wrap.clientHeight || 220;
-
-    const totalMm = glue + backW + spineW + frontW + glue;
+  /* ── SVG 공용 빌더 (화면·인쇄 공유) ── */
+  function buildSVGStr(backW, spineW, frontW, coverH, glue, W, H, forPrint) {
+    const totalMm  = glue + backW + spineW + frontW + glue;
     const totalHMm = glue + coverH + glue;
-    const S = Math.min((W - 60) / totalMm, (H - 50) / totalHMm);
+    const S  = Math.min((W - 60) / totalMm, (H - 50) / totalHMm);
+    const gx = glue*S,  bw = backW*S,  sw = spineW*S;
+    const fw = frontW*S, gh = glue*S,  ph = coverH*S;
+    const tw = totalMm*S, th = totalHMm*S;
+    const ox = (W - tw) / 2, oy = 8;
 
-    const gx = glue * S, bw = backW * S, sw = spineW * S;
-    const fw = frontW * S, gh = glue * S, ph = coverH * S;
-    const tw = totalMm * S, th = totalHMm * S;
-
-    const ox = (W - tw) / 2; // 수평 중앙
-    const oy = 8;
-
-    const r = (x, y, w, h, fill, stroke) =>
+    const r = (x,y,w,h,fill,stroke) =>
       `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1"/>`;
-    const tx = (x, y, s, anchor, size, color, weight) =>
+    const tx = (x,y,s,anchor,size,color,weight) =>
       `<text x="${x}" y="${y}" text-anchor="${anchor||'middle'}" font-size="${size||10}" fill="${color||'#777'}" font-weight="${weight||'normal'}" font-family="Helvetica Neue,Arial,sans-serif">${s}</text>`;
-    const tick = (x, y, w, label, sz) => {
-      const m = x + w / 2;
+    const tick = (x,y,w,label,sz) => {
+      const m = x + w/2;
       return `<line x1="${x}" y1="${y}" x2="${x+w}" y2="${y}" stroke="#c0b8b0" stroke-width="1"/>
               <line x1="${x}" y1="${y}" x2="${x}" y2="${y-5}" stroke="#c0b8b0" stroke-width="1"/>
               <line x1="${x+w}" y1="${y}" x2="${x+w}" y2="${y-5}" stroke="#c0b8b0" stroke-width="1"/>
               ${tx(m, y+12, label, 'middle', sz||9, '#888')}`;
     };
 
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+    let c = '';
+    c += r(ox, oy, tw, th, '#ece7e1', '#d5cfc8');
+    c += r(ox, oy, gx, th, '#e4dcd4', '#ccc5bc');
+    c += r(ox+tw-gx, oy, gx, th, '#e4dcd4', '#ccc5bc');
+    c += r(ox+gx, oy+gh, bw, ph, '#d8d2cb', '#bdb7af');
+    c += r(ox+gx+bw, oy+gh, sw, ph, '#a89d94', '#8f857c');
+    c += r(ox+gx+bw+sw, oy+gh, fw, ph, '#d8d2cb', '#bdb7af');
 
-    // 전체 배경 (풀칠 포함)
-    svg += r(ox, oy, tw, th, '#ece7e1', '#d5cfc8');
-    svg += r(ox, oy, gx, th, '#e4dcd4', '#ccc5bc');       // 풀칠 좌
-    svg += r(ox+tw-gx, oy, gx, th, '#e4dcd4', '#ccc5bc'); // 풀칠 우
-    svg += r(ox+gx, oy+gh, bw, ph, '#d8d2cb', '#bdb7af'); // 뒤표지
-    svg += r(ox+gx+bw, oy+gh, sw, ph, '#a89d94', '#8f857c'); // 책등
-    svg += r(ox+gx+bw+sw, oy+gh, fw, ph, '#d8d2cb', '#bdb7af'); // 앞표지
-
-    // 라벨
-    svg += tx(ox+gx+bw/2, oy+gh+ph/2+4, '뒤표지', 'middle', Math.min(11, bw/4), '#5a504a');
-    if (sw > 12) svg += tx(ox+gx+bw+sw/2, oy+gh+ph/2+4, '책등', 'middle', Math.min(10, sw/2.5), '#2a1a10', '700');
-    svg += tx(ox+gx+bw+sw+fw/2, oy+gh+ph/2+4, '앞표지', 'middle', Math.min(11, fw/4), '#5a504a');
+    c += tx(ox+gx+bw/2, oy+gh+ph/2+4, '뒤표지', 'middle', Math.min(11, bw/4), '#5a504a');
+    if (sw > 12) c += tx(ox+gx+bw+sw/2, oy+gh+ph/2+4, '책등', 'middle', Math.min(10, sw/2.5), '#2a1a10', '700');
+    c += tx(ox+gx+bw+sw+fw/2, oy+gh+ph/2+4, '앞표지', 'middle', Math.min(11, fw/4), '#5a504a');
     if (gx > 10) {
-      svg += tx(ox+gx/2, oy+th/2, '풀칠', 'middle', 8, '#9a8e86');
-      svg += tx(ox+tw-gx/2, oy+th/2, '풀칠', 'middle', 8, '#9a8e86');
+      c += tx(ox+gx/2, oy+th/2, '풀칠', 'middle', 8, '#9a8e86');
+      c += tx(ox+tw-gx/2, oy+th/2, '풀칠', 'middle', 8, '#9a8e86');
     }
 
-    // 치수 (하단)
     const dy = oy + th + 6;
-    svg += tick(ox, dy, gx, '15', 8);
-    svg += tick(ox+gx, dy, bw, fmt(backW)+'mm', 9);
-    svg += tick(ox+gx+bw, dy, sw, fmt(spineW)+'mm', 9);
-    svg += tick(ox+gx+bw+sw, dy, fw, fmt(frontW)+'mm', 9);
-    svg += tick(ox+tw-gx, dy, gx, '15', 8);
+    c += tick(ox, dy, gx, '15', 8);
+    c += tick(ox+gx, dy, bw, fmt(backW)+'mm', 9);
+    c += tick(ox+gx+bw, dy, sw, fmt(spineW)+'mm', 9);
+    c += tick(ox+gx+bw+sw, dy, fw, fmt(frontW)+'mm', 9);
+    c += tick(ox+tw-gx, dy, gx, '15', 8);
 
-    // 총 가로 (파선)
     const fy = oy + th + 38;
     if (fy < H - 4) {
-      svg += `<line x1="${ox}" y1="${fy}" x2="${ox+tw}" y2="${fy}" stroke="#aaa" stroke-width="1" stroke-dasharray="3,3"/>`;
-      svg += tx(ox+tw/2, fy+12, `총 가로 ${fmt(totalMm)}mm`, 'middle', 10, '#333', '700');
+      c += `<line x1="${ox}" y1="${fy}" x2="${ox+tw}" y2="${fy}" stroke="#aaa" stroke-width="1" stroke-dasharray="3,3"/>`;
+      c += tx(ox+tw/2, fy+12, `총 가로 ${fmt(totalMm)}mm`, 'middle', 10, '#333', '700');
     }
-
-    // 세로 치수 (우측)
     const rx2 = ox + tw + 12;
     if (rx2 + 30 < W) {
-      svg += `<line x1="${rx2}" y1="${oy+gh}" x2="${rx2}" y2="${oy+gh+ph}" stroke="#c0b8b0" stroke-width="1"/>`;
-      svg += `<line x1="${rx2-4}" y1="${oy+gh}" x2="${rx2}" y2="${oy+gh}" stroke="#c0b8b0" stroke-width="1"/>`;
-      svg += `<line x1="${rx2-4}" y1="${oy+gh+ph}" x2="${rx2}" y2="${oy+gh+ph}" stroke="#c0b8b0" stroke-width="1"/>`;
-      svg += tx(rx2+5, oy+gh+ph/2+4, `${fmt(coverH)}mm`, 'start', 9, '#888');
+      c += `<line x1="${rx2}" y1="${oy+gh}" x2="${rx2}" y2="${oy+gh+ph}" stroke="#c0b8b0" stroke-width="1"/>`;
+      c += `<line x1="${rx2-4}" y1="${oy+gh}" x2="${rx2}" y2="${oy+gh}" stroke="#c0b8b0" stroke-width="1"/>`;
+      c += `<line x1="${rx2-4}" y1="${oy+gh+ph}" x2="${rx2}" y2="${oy+gh+ph}" stroke="#c0b8b0" stroke-width="1"/>`;
+      c += tx(rx2+5, oy+gh+ph/2+4, `${fmt(coverH)}mm`, 'start', 9, '#888');
     }
 
-    svg += '</svg>';
-    wrap.innerHTML = svg;
+    const attrs = forPrint
+      ? `xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block"`
+      : `xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"`;
+    return `<svg ${attrs}>${c}</svg>`;
+  }
+
+  /* ── 화면 도식 ── */
+  function drawDiagram(targetId, backW, spineW, frontW, coverH, glue) {
+    const wrap = document.getElementById(targetId);
+    const W = wrap.clientWidth  || 600;
+    const H = wrap.clientHeight || 220;
+    wrap.innerHTML = buildSVGStr(backW, spineW, frontW, coverH, glue, W, H, false);
+  }
+
+  /* ── PDF 내보내기 ── */
+  function exportPDF() {
+    if (!lastCalc) return;
+    const { panelW, spine, panelH, glue, totalW, totalH, tab } = lastCalc;
+
+    // DOM에서 원본 입력값 읽기
+    let bookW, bookH, bookT, extraChips = '';
+    if (tab === 'gak') {
+      bookW = document.getElementById('gak-w').value;
+      bookH = document.getElementById('gak-h').value;
+      bookT = document.getElementById('gak-t').value;
+    } else {
+      bookW = document.getElementById('hwan-w').value;
+      bookH = document.getElementById('hwan-h').value;
+      bookT = document.getElementById('hwan-t').value;
+      const board = parseFloat(document.getElementById('hwan-board').value);
+      const extra = parseInt(document.getElementById('hwan-extra').value);
+      extraChips = `
+        <div class="spec-chip"><span class="sc-lbl">책등합지두께</span><span class="sc-val">${board}mm</span></div>
+        <div class="spec-chip"><span class="sc-lbl">책등 여유값</span><span class="sc-val">${extra}mm</span></div>`;
+    }
+
+    const tabLabel   = tab === 'gak' ? '각양장제본' : '환양장제본';
+    const tabLabelEn = tab === 'gak' ? 'Square Hardcover' : 'Round Hardcover';
+    const today      = new Date().toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' });
+
+    // 인쇄용 SVG (고정 580×200 viewBox)
+    const svgStr = buildSVGStr(panelW, spine, panelW, panelH, glue, 580, 200, true);
+
+    const seg  = (cls, name, val) => `<span class="seg ${cls}"><span class="sn">${name}</span> ${val}</span>`;
+    const plus = `<span class="pl">+</span>`;
+
+    const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>양장 표지 작업 사양서</title>
+<style>
+  @page { size: A4 portrait; margin: 14mm 16mm 12mm; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display:none; } }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, 'Apple SD Gothic Neo', sans-serif; color: #1e1e1e; font-size: 10pt; background: #fff; }
+
+  /* 헤더 */
+  .dh { display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:10px; border-bottom:2.5px solid #1e1e1e; margin-bottom:16px; }
+  .dh-brand { font-size:8pt; color:#999; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:3px; }
+  .dh-title { font-size:20pt; font-weight:800; letter-spacing:-0.025em; }
+  .dh-date { text-align:right; }
+  .dh-date label { font-size:8pt; color:#aaa; display:block; margin-bottom:2px; letter-spacing:0.05em; }
+  .dh-date input { border:none; border-bottom:1px solid #ccc; font-size:10pt; font-weight:600; text-align:right; width:120px; outline:none; font-family:inherit; background:transparent; }
+
+  /* 섹션 */
+  .sec { margin-bottom:13px; }
+  .sec-title { font-size:7.5pt; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#bbb; margin-bottom:8px; }
+
+  /* 메타 */
+  .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px 28px; }
+  .mf { display:flex; align-items:baseline; gap:8px; border-bottom:1px solid #e8e4e0; padding-bottom:4px; }
+  .mf label { font-size:8.5pt; color:#aaa; white-space:nowrap; min-width:50px; }
+  .mf input { flex:1; border:none; outline:none; font-size:10pt; font-family:inherit; background:transparent; color:#1e1e1e; }
+
+  /* 사양 칩 */
+  .specs-row { display:flex; gap:6px; flex-wrap:wrap; align-items:stretch; }
+  .spec-chip { display:inline-flex; flex-direction:column; padding:6px 12px; border-radius:7px; background:#f3efec; gap:1px; }
+  .spec-chip.type { background:#1e1e1e; color:#fff; }
+  .sc-lbl { font-size:7.5pt; color:#aaa; }
+  .spec-chip.type .sc-lbl { color:rgba(255,255,255,0.45); }
+  .sc-val { font-size:12pt; font-weight:700; }
+
+  /* 결과 */
+  .result-row { display:flex; gap:10px; }
+  .rt { flex:1; border:2px solid #1e1e1e; border-radius:10px; padding:12px 18px; }
+  .rt .rt-lbl { font-size:8pt; letter-spacing:0.1em; text-transform:uppercase; color:#aaa; margin-bottom:4px; }
+  .rt .rt-val { font-size:32pt; font-weight:800; letter-spacing:-0.04em; line-height:1; }
+  .rt .rt-unit { font-size:13pt; font-weight:400; color:#aaa; margin-left:2px; }
+
+  /* 분해 */
+  .bd-table { width:100%; border-collapse:collapse; }
+  .bd-table td { padding:5px 6px; font-size:9pt; border-bottom:1px solid #f0ece8; vertical-align:middle; }
+  .bd-table td:first-child { width:38px; font-size:7.5pt; font-weight:700; color:#aaa; letter-spacing:0.1em; text-transform:uppercase; padding-left:0; }
+  .bd-table td:last-child { font-weight:800; color:#3d2b1f; text-align:right; white-space:nowrap; padding-right:0; }
+  .seg { display:inline-flex; align-items:center; gap:3px; padding:2px 7px; border-radius:4px; font-size:8.5pt; white-space:nowrap; }
+  .seg .sn { font-size:7.5pt; color:rgba(0,0,0,0.4); }
+  .seg.glue { background:#ece7e1; } .seg.panel { background:#ddd7d0; } .seg.spine { background:#c9bfb5; }
+  .pl { color:#ccc; margin:0 2px; font-size:10pt; }
+
+  /* 도식 */
+  .diag-wrap { width:100%; }
+
+  /* 메모 */
+  .memo { display:flex; flex-direction:column; gap:0; }
+  .memo-line { border-bottom:1px solid #e0dbd6; height:24px; }
+
+  /* 푸터 */
+  .doc-footer { margin-top:12px; padding-top:8px; border-top:1px solid #eee; display:flex; justify-content:space-between; font-size:7pt; color:#ccc; }
+
+  /* 인쇄 버튼 */
+  .no-print { position:fixed; bottom:20px; right:20px; display:flex; gap:8px; }
+  .print-btn { padding:10px 20px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .print-btn.go { background:#1e1e1e; color:#fff; }
+  .print-btn.cl { background:#f0ece8; color:#666; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button class="print-btn cl" onclick="window.close()">닫기</button>
+  <button class="print-btn go" onclick="window.print()">🖨 PDF 저장</button>
+</div>
+
+<!-- 헤더 -->
+<div class="dh">
+  <div>
+    <div class="dh-brand">Roseshaker</div>
+    <div class="dh-title">양장 표지 작업 사양서</div>
+  </div>
+  <div class="dh-date">
+    <label>발행일</label>
+    <input type="text" value="${today}">
+  </div>
+</div>
+
+<!-- 프로젝트 정보 -->
+<div class="sec">
+  <div class="sec-title">프로젝트 정보</div>
+  <div class="meta-grid">
+    <div class="mf"><label>프로젝트명</label><input type="text" placeholder=""></div>
+    <div class="mf"><label>제본소</label><input type="text" placeholder=""></div>
+    <div class="mf"><label>작업자</label><input type="text" placeholder=""></div>
+    <div class="mf"><label>용지</label><input type="text" placeholder=""></div>
+  </div>
+</div>
+
+<!-- 책 사양 -->
+<div class="sec">
+  <div class="sec-title">책 사양</div>
+  <div class="specs-row">
+    <div class="spec-chip type"><span class="sc-lbl">제본 방식</span><span class="sc-val">${tabLabel}</span></div>
+    <div class="spec-chip"><span class="sc-lbl">책 가로</span><span class="sc-val">${bookW}mm</span></div>
+    <div class="spec-chip"><span class="sc-lbl">책 세로</span><span class="sc-val">${bookH}mm</span></div>
+    <div class="spec-chip"><span class="sc-lbl">내지 두께</span><span class="sc-val">${bookT}mm</span></div>
+    ${extraChips}
+  </div>
+</div>
+
+<!-- 표지 재단 사이즈 -->
+<div class="sec">
+  <div class="sec-title">표지 재단 사이즈</div>
+  <div class="result-row">
+    <div class="rt">
+      <div class="rt-lbl">전체 가로 (폭)</div>
+      <div class="rt-val">${fmt(totalW)}<span class="rt-unit">mm</span></div>
+    </div>
+    <div class="rt">
+      <div class="rt-lbl">전체 세로 (높이)</div>
+      <div class="rt-val">${fmt(totalH)}<span class="rt-unit">mm</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 사이즈 분해 -->
+<div class="sec">
+  <div class="sec-title">사이즈 분해</div>
+  <table class="bd-table">
+    <tr>
+      <td>가로</td>
+      <td>${seg('glue','풀칠',glue+'mm')} ${plus} ${seg('panel','뒤표지',fmt(panelW)+'mm')} ${plus} ${seg('spine','책등',fmt(spine)+'mm')} ${plus} ${seg('panel','앞표지',fmt(panelW)+'mm')} ${plus} ${seg('glue','풀칠',glue+'mm')}</td>
+      <td>= ${fmt(totalW)}mm</td>
+    </tr>
+    <tr>
+      <td>세로</td>
+      <td>${seg('glue','풀칠',glue+'mm')} ${plus} ${seg('panel','표지세로',fmt(panelH)+'mm')} ${plus} ${seg('glue','풀칠',glue+'mm')}</td>
+      <td>= ${fmt(totalH)}mm</td>
+    </tr>
+  </table>
+</div>
+
+<!-- 구조 도식 -->
+<div class="sec">
+  <div class="sec-title">표지 구조 도식</div>
+  <div class="diag-wrap">${svgStr}</div>
+</div>
+
+<!-- 메모 -->
+<div class="sec">
+  <div class="sec-title">메모</div>
+  <div class="memo">
+    <div class="memo-line"></div>
+    <div class="memo-line"></div>
+    <div class="memo-line"></div>
+  </div>
+</div>
+
+<div class="doc-footer">
+  <span>Roseshaker · 양장 표지 작업 사양서 · ${tabLabel} (${tabLabelEn})</span>
+  <span>양장 표지 적용사이즈 가이드 2015.6.12 기준</span>
+</div>
+
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=1200');
+    if (!win) { alert('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도해주세요.'); return; }
+    win.document.write(html);
+    win.document.close();
   }
 
   /* ── 복사 ── */
