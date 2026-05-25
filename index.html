@@ -607,7 +607,8 @@
         </div>
         <div class="action-tile-group">
           <button class="action-tile" onclick="copyBoth()">⎘ 전체 복사</button>
-          <button class="action-tile primary" onclick="exportPDF()">↓ PDF 저장</button>
+          <button class="action-tile" onclick="exportPDF()">↓ PDF 사양서</button>
+          <button class="action-tile primary" onclick="exportTemplate()">⬡ AI 템플릿</button>
         </div>
       </div>
 
@@ -1055,6 +1056,175 @@
       document.getElementById('hwan-extra-val').textContent = '6mm';
     }
     showEmpty();
+  }
+
+  /* ── AI 템플릿 SVG 내보내기 ── */
+  function exportTemplate() {
+    if (!lastCalc) return;
+    const { panelW, spine, panelH, glue, totalW, totalH, tab } = lastCalc;
+
+    let bookW, bookH;
+    if (tab === 'gak') {
+      bookW = document.getElementById('gak-w').value;
+      bookH = document.getElementById('gak-h').value;
+    } else {
+      bookW = document.getElementById('hwan-w').value;
+      bookH = document.getElementById('hwan-h').value;
+    }
+    const tabLabel = tab === 'gak' ? '각양장제본' : '환양장제본';
+    const svgStr   = buildTemplateSVG(panelW, spine, panelW, panelH, glue, totalW, totalH, tabLabel);
+
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `양장표지_템플릿_${fmt(totalW)}x${fmt(totalH)}mm.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* ── 템플릿 SVG 빌더 (1 unit = 1mm, Illustrator 호환) ── */
+  function buildTemplateSVG(backW, spineW, frontW, coverH, glue, totalW, totalH, tabLabel) {
+    // 치수 레이블 여백
+    const PAD_B = 24; // 하단 (가로 치수 공간)
+    const PAD_R = 28; // 우측 (세로 치수 공간)
+    const canvasW = totalW + PAD_R;
+    const canvasH = totalH + PAD_B;
+
+    // 색상
+    const C = {
+      glueFill:   '#EDEAE6',
+      panelFill:  '#DDDAD5',
+      spineFill:  '#C2BAB0',
+      border:     '#BFB8B0',
+      panelText:  '#5A504A',
+      spineText:  '#2E1F16',
+      glueText:   '#ABA49C',
+      dim:        '#9A9490',
+      dimLight:   '#C0BAB4',
+      meta:       '#C8C2BC',
+    };
+
+    const r = (x,y,w,h,fill,stroke,sw=0.25,rx=0) =>
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" rx="${rx}"/>`;
+    const t = (x,y,s,anchor,size,fill,weight='normal',extra='') =>
+      `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${size}" fill="${fill}" font-weight="${weight}" font-family="Helvetica Neue,Arial,sans-serif" ${extra}>${s}</text>`;
+
+    // 수평 치수선 (하단 기준선에서 아래로)
+    const dimH = (x, y, w, label) => {
+      const x2 = x + w, mx = x + w / 2;
+      return `<line x1="${x}" y1="${y-1.2}" x2="${x}" y2="${y+1.2}" stroke="${C.dim}" stroke-width="0.2"/>
+              <line x1="${x2}" y1="${y-1.2}" x2="${x2}" y2="${y+1.2}" stroke="${C.dim}" stroke-width="0.2"/>
+              <line x1="${x}" y1="${y}" x2="${x2}" y2="${y}" stroke="${C.dim}" stroke-width="0.2"/>
+              ${t(mx, y+3.8, label, 'middle', 2.8, C.dim)}`;
+    };
+
+    // 수직 치수선 (우측)
+    const dimV = (x, y, h, label) => {
+      const y2 = y + h, my = y + h / 2;
+      return `<line x1="${x-1.2}" y1="${y}" x2="${x+1.2}" y2="${y}" stroke="${C.dim}" stroke-width="0.2"/>
+              <line x1="${x-1.2}" y1="${y2}" x2="${x+1.2}" y2="${y2}" stroke="${C.dim}" stroke-width="0.2"/>
+              <line x1="${x}" y1="${y}" x2="${x}" y2="${y2}" stroke="${C.dim}" stroke-width="0.2"/>
+              ${t(x+2.5, my+1, label, 'start', 2.8, C.dim)}`;
+    };
+
+    const fs     = 3.8;  // 일반 라벨 폰트 크기 (mm)
+    const fsNote = 2.4;  // 작은 메모 폰트
+
+    let body = '';
+
+    /* ── 배경 (풀칠 전체) ── */
+    body += `\n  <!-- 풀칠 영역 -->\n  <g id="glue">`;
+    body += r(0, 0, totalW, totalH, C.glueFill, C.border, 0.3);
+    // 풀칠 라벨
+    body += t(glue/2, totalH/2 + 1, '풀칠', 'middle', fsNote, C.glueText);
+    body += t(totalW - glue/2, totalH/2 + 1, '풀칠', 'middle', fsNote, C.glueText);
+    body += `\n  </g>`;
+
+    /* ── 뒤표지 ── */
+    body += `\n\n  <!-- 뒤표지 -->\n  <g id="back-cover">`;
+    body += r(glue, glue, backW, coverH, C.panelFill, C.border);
+    body += t(glue + backW/2, glue + coverH/2 + fs*0.38, '뒤표지', 'middle', fs, C.panelText);
+    body += `\n  </g>`;
+
+    /* ── 책등 ── */
+    body += `\n\n  <!-- 책등 -->\n  <g id="spine">`;
+    body += r(glue + backW, glue, spineW, coverH, C.spineFill, C.border);
+    const sfs = Math.min(fs, spineW * 0.42);
+    if (spineW >= 7) {
+      body += t(glue + backW + spineW/2, glue + coverH/2 + sfs*0.38, '책등', 'middle', sfs, C.spineText, 'bold');
+    }
+    body += `\n  </g>`;
+
+    /* ── 앞표지 ── */
+    body += `\n\n  <!-- 앞표지 -->\n  <g id="front-cover">`;
+    body += r(glue + backW + spineW, glue, frontW, coverH, C.panelFill, C.border);
+    body += t(glue + backW + spineW + frontW/2, glue + coverH/2 + fs*0.38, '앞표지', 'middle', fs, C.panelText);
+    body += `\n  </g>`;
+
+    /* ── 재단선 (파선) ── */
+    body += `\n\n  <!-- 재단선 -->\n  <g id="crop-guides" stroke="${C.dimLight}" stroke-width="0.15" stroke-dasharray="1.5,1" fill="none">`;
+    // 풀칠 경계선 (좌우)
+    body += `<line x1="${glue}" y1="0" x2="${glue}" y2="${totalH}"/>`;
+    body += `<line x1="${totalW - glue}" y1="0" x2="${totalW - glue}" y2="${totalH}"/>`;
+    // 풀칠 경계선 (상하)
+    body += `<line x1="0" y1="${glue}" x2="${totalW}" y2="${glue}"/>`;
+    body += `<line x1="0" y1="${totalH - glue}" x2="${totalW}" y2="${totalH - glue}"/>`;
+    // 책등 경계선
+    body += `<line x1="${glue + backW}" y1="${glue}" x2="${glue + backW}" y2="${totalH - glue}"/>`;
+    body += `<line x1="${glue + backW + spineW}" y1="${glue}" x2="${glue + backW + spineW}" y2="${totalH - glue}"/>`;
+    body += `\n  </g>`;
+
+    /* ── 치수 표기 ── */
+    const dimY1 = totalH + 5;   // 1차 (각 파트)
+    const dimY2 = totalH + 14;  // 2차 (총 가로)
+    const dimX  = totalW + 5;   // 우측 세로 치수
+
+    body += `\n\n  <!-- 치수 -->\n  <g id="dimensions">`;
+    body += dimH(0,               dimY1, glue,  '15mm');
+    body += dimH(glue,            dimY1, backW, `${fmt(backW)}mm`);
+    body += dimH(glue + backW,    dimY1, spineW,`${fmt(spineW)}mm`);
+    body += dimH(glue+backW+spineW, dimY1, frontW, `${fmt(frontW)}mm`);
+    body += dimH(totalW - glue,   dimY1, glue,  '15mm');
+    // 총 가로
+    body += `<line x1="0" y1="${dimY2}" x2="${totalW}" y2="${dimY2}" stroke="${C.dim}" stroke-width="0.2" stroke-dasharray="2,1.5"/>`;
+    body += t(totalW/2, dimY2 + 3.8, `총 가로  ${fmt(totalW)}mm`, 'middle', 3, C.dim, 'bold');
+    // 세로 치수 (표지 영역)
+    body += dimV(dimX + 3, glue, coverH, `${fmt(coverH)}mm`);
+    // 세로 치수 (전체)
+    body += `<line x1="${dimX + 14}" y1="0" x2="${dimX + 14}" y2="${totalH}" stroke="${C.dim}" stroke-width="0.2" stroke-dasharray="2,1.5"/>`;
+    body += t(dimX + 16.5, totalH/2 + 1, `총 세로  ${fmt(totalH)}mm`, 'start', 3, C.dim, 'bold');
+    body += `\n  </g>`;
+
+    /* ── 메타 정보 ── */
+    const today = new Date().toLocaleDateString('ko-KR');
+    body += `\n\n  <!-- 메타 -->\n  <g id="meta" opacity="0.6">`;
+    body += t(0, canvasH - 0.5, `Roseshaker · ${tabLabel} 표지 템플릿 · ${fmt(totalW)}×${fmt(totalH)}mm · 가이드 2015.6.12 · ${today}`, 'start', 2.2, C.meta);
+    body += `\n  </g>`;
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Roseshaker 양장 표지 디자인 템플릿
+  제본 방식  : ${tabLabel}
+  전체 사이즈: ${fmt(totalW)}mm × ${fmt(totalH)}mm
+  기준 가이드: 양장 표지 적용사이즈 2015.6.12
+  생성일    : ${today}
+
+  [일러스트레이터 사용법]
+  1. File → Open 으로 이 파일을 엽니다.
+  2. 아트보드가 실제 표지 사이즈(${fmt(totalW)}×${fmt(totalH)}mm)로 자동 설정됩니다.
+  3. 각 레이어(그룹): glue / back-cover / spine / front-cover / crop-guides / dimensions
+  4. 디자인 레이어를 추가하고 가이드 위에 작업하세요.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${canvasW}mm"
+     height="${canvasH}mm"
+     viewBox="0 0 ${canvasW} ${canvasH}">
+  <title>양장 표지 템플릿 — ${tabLabel} ${fmt(totalW)}×${fmt(totalH)}mm</title>
+  ${body}
+</svg>`;
   }
 
   /* ── 리사이즈 대응 ── */
