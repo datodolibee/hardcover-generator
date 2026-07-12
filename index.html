@@ -6,19 +6,90 @@
   <meta name="description" content="책 가로·세로·내지두께를 입력하면 각양장·환양장 표지 재단 사이즈를 자동 계산합니다.">
   <meta property="og:title" content="양장 표지 사이즈 제너레이터">
   <meta property="og:description" content="각양장·환양장 표지 재단 사이즈 자동 계산기 — Roseshaker">
+  <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161617" media="(prefers-color-scheme: dark)">
   <title>양장 표지 사이즈 제너레이터</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>
     :root {
-      --bg: #F7F6F3;
+      --bg: #F5F5F7;
       --surface: #FFFFFF;
-      --border: #E9E6E0;
-      --border-strong: #D8D4CC;
-      --ink: #1A1918;
-      --text: #37352F;
-      --muted: #8F8B83;
-      --faint: #BAB5AC;
+      --surface-2: #F0F0F3;
+      --surface-3: #E8E8EC;
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.18);
+      --ink: #1D1D1F;
+      --text: #3A3A3C;
+      --muted: #86868B;
+      --faint: #AEAEB2;
+      --accent: #0071E3;
+      --accent-hover: #0077ED;
+      --accent-soft: rgba(0,113,227,0.10);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-seg: 0 1px 3px rgba(0,0,0,0.08), 0 3px 8px rgba(0,0,0,0.06);
+      --track: #E2E2E7;
+      --chip-glue: #F0F0F3;
+      --chip-panel: #E7E7EC;
+      --chip-spine: #D6D6DE;
+      --chip-name: rgba(60,60,67,0.55);
       --mono: 'SF Mono', ui-monospace, Menlo, 'JetBrains Mono', monospace;
+      /* 도식 팔레트 */
+      --dg-canvas: #F5F5F7;
+      --dg-canvas-stroke: #E5E5EA;
+      --dg-glue: #EBEBEF;
+      --dg-glue-stroke: #DEDEE3;
+      --dg-glue-text: #A0A0A8;
+      --dg-panel: #E2E2E7;
+      --dg-panel-stroke: #CFCFD6;
+      --dg-panel-text: #55555E;
+      --dg-spine: #C6C6D0;
+      --dg-spine-stroke: #ABABB8;
+      --dg-spine-text: #2C2C33;
+      --dg-tick: #C7C7CE;
+      --dg-dim-text: #86868B;
+      --dg-total-text: #1D1D1F;
+      color-scheme: light;
+    }
+
+    [data-theme="dark"] {
+      --bg: #161617;
+      --surface: #1F1F21;
+      --surface-2: #2A2A2D;
+      --surface-3: #333336;
+      --border: rgba(255,255,255,0.09);
+      --border-strong: rgba(255,255,255,0.22);
+      --ink: #F5F5F7;
+      --text: #D5D5DA;
+      --muted: #98989F;
+      --faint: #6E6E76;
+      --accent: #0A84FF;
+      --accent-hover: #2B95FF;
+      --accent-soft: rgba(10,132,255,0.16);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-seg: 0 1px 3px rgba(0,0,0,0.45), 0 3px 8px rgba(0,0,0,0.35);
+      --track: #3A3A3F;
+      --chip-glue: #2A2A2E;
+      --chip-panel: #333338;
+      --chip-spine: #45454E;
+      --chip-name: rgba(235,235,245,0.5);
+      /* 도식 팔레트 */
+      --dg-canvas: #242427;
+      --dg-canvas-stroke: #323236;
+      --dg-glue: #2B2B2F;
+      --dg-glue-stroke: #3A3A3F;
+      --dg-glue-text: #6E6E76;
+      --dg-panel: #343439;
+      --dg-panel-stroke: #48484F;
+      --dg-panel-text: #C7C7CE;
+      --dg-spine: #4C4C56;
+      --dg-spine-stroke: #62626C;
+      --dg-spine-text: #F5F5F7;
+      --dg-tick: #4D4D55;
+      --dg-dim-text: #98989F;
+      --dg-total-text: #F5F5F7;
+      color-scheme: dark;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,12 +100,13 @@
     }
 
     body {
-      font-family: 'Pretendard Variable', Pretendard, 'Helvetica Neue', 'Apple SD Gothic Neo', sans-serif;
+      font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Helvetica Neue', 'Apple SD Gothic Neo', sans-serif;
       background: var(--bg);
       color: var(--text);
       display: flex;
       flex-direction: column;
       -webkit-font-smoothing: antialiased;
+      transition: background 0.25s ease, color 0.25s ease;
     }
 
     /* ── 헤더 ── */
@@ -43,20 +115,21 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 32px;
-      height: 60px;
+      padding: 0 28px;
+      height: 56px;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
     .header-left {
       display: flex;
       align-items: baseline;
-      gap: 14px;
+      gap: 12px;
     }
     .header-left h1 {
       font-size: 15px;
       font-weight: 600;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
       color: var(--ink);
     }
     .header-left .brand {
@@ -67,11 +140,38 @@
       text-transform: uppercase;
     }
     .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-caption {
       font-family: var(--mono);
       font-size: 10px;
       color: var(--faint);
       letter-spacing: 0.04em;
     }
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .theme-toggle:hover {
+      color: var(--ink);
+      border-color: var(--border-strong);
+      background: var(--surface-2);
+    }
+    .theme-toggle svg { display: block; }
+    .theme-toggle .icon-sun { display: none; }
+    [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+    [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 
     /* ── 메인 2패널 ── */
     .app-body {
@@ -87,26 +187,27 @@
       flex-shrink: 0;
       overflow-y: auto;
       border-right: 1px solid var(--border);
-      padding: 28px 28px 32px;
+      padding: 24px 24px 28px;
       background: var(--surface);
       display: flex;
       flex-direction: column;
       gap: 26px;
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
 
     /* 탭 — 세그먼트 컨트롤 */
     .tabs {
       display: flex;
       gap: 2px;
-      background: #F1EFEA;
-      border-radius: 8px;
+      background: var(--surface-2);
+      border-radius: 10px;
       padding: 3px;
     }
     .tab-btn {
       flex: 1;
       padding: 8px 10px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       background: transparent;
       cursor: pointer;
       font-family: inherit;
@@ -131,8 +232,9 @@
       background: var(--surface);
       color: var(--ink);
       font-weight: 600;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: var(--shadow-seg);
     }
+    [data-theme="dark"] .tab-btn.active { background: var(--surface-3); }
     .tab-btn.active .sub { color: var(--muted); }
 
     /* 섹션 라벨 */
@@ -169,20 +271,22 @@
       font-size: 16px;
       font-weight: 600;
       font-variant-numeric: tabular-nums;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface);
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: var(--surface-2);
       color: var(--ink);
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
       -moz-appearance: textfield;
     }
     .field input::placeholder { color: var(--faint); font-weight: 400; }
     .field input::-webkit-outer-spin-button,
     .field input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .field input:hover { background: var(--surface-3); }
     .field input:focus {
-      border-color: var(--ink);
-      box-shadow: 0 0 0 3px rgba(26,25,24,0.05);
+      border-color: var(--accent);
+      background: var(--surface);
+      box-shadow: 0 0 0 3.5px var(--accent-soft);
     }
     .input-unit {
       position: absolute;
@@ -198,7 +302,6 @@
 
     /* 슬라이더 */
     .slider-block { display: flex; flex-direction: column; gap: 16px; }
-    .slider-item {}
     .slider-item label {
       display: flex;
       justify-content: space-between;
@@ -206,7 +309,7 @@
       font-size: 11px;
       font-weight: 500;
       color: var(--muted);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .slider-item label .s-val {
       font-family: var(--mono);
@@ -217,24 +320,47 @@
       text-transform: none;
     }
     .slider-item input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
       width: 100%;
-      height: 3px;
-      accent-color: var(--ink);
+      height: 4px;
+      border-radius: 2px;
+      background: var(--track);
       cursor: pointer;
+      outline: none;
     }
-    .slider-hint { font-size: 10px; color: var(--faint); margin-top: 6px; line-height: 1.6; }
+    .slider-item input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0,0,0,0.08);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.22), 0 0.5px 1px rgba(0,0,0,0.12);
+      transition: transform 0.12s ease;
+    }
+    .slider-item input[type=range]::-webkit-slider-thumb:active { transform: scale(1.12); }
+    .slider-item input[type=range]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 0.5px solid rgba(0,0,0,0.08);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.22);
+    }
+    .slider-hint { font-size: 10px; color: var(--faint); margin-top: 8px; line-height: 1.6; }
 
     /* 공식 박스 */
     .formula-box {
-      background: var(--bg);
-      border: none;
-      border-radius: 8px;
+      background: var(--surface-2);
+      border-radius: 10px;
       padding: 14px 16px;
       font-size: 11.5px;
       color: var(--muted);
       line-height: 1.9;
     }
-    .formula-box strong { color: var(--text); font-weight: 600; }
+    .formula-box strong { color: var(--ink); font-weight: 600; }
 
     /* ── 오른쪽 패널 (결과) ── */
     .right-panel {
@@ -243,8 +369,8 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      padding: 28px 32px;
-      gap: 14px;
+      padding: 24px 28px;
+      gap: 12px;
     }
 
     /* 빈 상태 */
@@ -264,20 +390,21 @@
     /* 결과 숫자 */
     .result-nums-row {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       flex-shrink: 0;
     }
     .result-box {
       flex: 1;
       background: var(--surface);
       border: 1px solid var(--border);
-      color: var(--ink);
-      border-radius: 10px;
+      border-radius: 14px;
       padding: 18px 22px;
       display: flex;
       flex-direction: column;
       gap: 8px;
       position: relative;
+      box-shadow: var(--shadow-sm);
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
     .result-box .r-label {
       font-family: var(--mono);
@@ -287,9 +414,9 @@
       color: var(--muted);
     }
     .result-box .r-value {
-      font-size: 40px;
+      font-size: 42px;
       font-weight: 700;
-      letter-spacing: -0.03em;
+      letter-spacing: -0.035em;
       font-variant-numeric: tabular-nums;
       line-height: 1;
       color: var(--ink);
@@ -299,6 +426,7 @@
       font-weight: 400;
       color: var(--faint);
       margin-left: 3px;
+      letter-spacing: 0;
     }
     .result-box .r-copy {
       position: absolute;
@@ -306,7 +434,7 @@
       right: 14px;
       padding: 4px 10px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 7px;
       background: transparent;
       color: var(--muted);
       font-family: inherit;
@@ -319,7 +447,7 @@
     .result-box .r-copy:hover {
       color: var(--ink);
       border-color: var(--border-strong);
-      background: var(--bg);
+      background: var(--surface-2);
     }
 
     /* 분해 */
@@ -327,11 +455,13 @@
       flex-shrink: 0;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 14px;
       padding: 16px 20px;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      box-shadow: var(--shadow-sm);
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
     .bd-axis {
       display: flex;
@@ -361,20 +491,20 @@
       flex-direction: column;
       align-items: center;
       padding: 4px 9px;
-      border-radius: 6px;
+      border-radius: 7px;
       font-size: 10px;
       line-height: 1.35;
     }
-    .bd-seg .seg-name { color: rgba(55,53,47,0.5); font-size: 9px; }
+    .bd-seg .seg-name { color: var(--chip-name); font-size: 9px; }
     .bd-seg .seg-val {
       font-weight: 600;
       font-size: 12px;
       color: var(--ink);
       font-variant-numeric: tabular-nums;
     }
-    .bd-seg.glue { background: #F3F1EC; }
-    .bd-seg.panel { background: #ECE9E2; }
-    .bd-seg.spine { background: #DDD8CE; }
+    .bd-seg.glue { background: var(--chip-glue); }
+    .bd-seg.panel { background: var(--chip-panel); }
+    .bd-seg.spine { background: var(--chip-spine); }
     .bd-plus { font-size: 11px; color: var(--faint); flex-shrink: 0; }
     .bd-eq {
       font-size: 12px;
@@ -396,11 +526,13 @@
       min-height: 0;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 14px;
       padding: 18px 20px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
     .diagram-label {
       font-family: var(--mono);
@@ -422,17 +554,11 @@
       height: 100%;
     }
 
-    /* 하단 액션 */
-    .action-row {
-      flex-shrink: 0;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
+    /* 하단 버튼 공통 */
     .ghost-btn {
       padding: 9px 16px;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       background: transparent;
       color: var(--muted);
       font-family: inherit;
@@ -441,7 +567,7 @@
       cursor: pointer;
       transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
-    .ghost-btn:hover { border-color: var(--border-strong); color: var(--ink); background: var(--bg); }
+    .ghost-btn:hover { border-color: var(--border-strong); color: var(--ink); background: var(--surface-2); }
 
     /* 판형 프리셋 */
     .preset-label {
@@ -461,19 +587,23 @@
     .preset-btn {
       padding: 10px 12px;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       background: var(--surface);
       cursor: pointer;
       font-family: inherit;
       text-align: left;
-      transition: border-color 0.15s, background 0.15s;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
       display: flex;
       flex-direction: column;
       gap: 3px;
       position: relative;
     }
-    .preset-btn:hover { border-color: var(--border-strong); background: #FBFAF8; }
-    .preset-btn.active-preset { border-color: var(--ink); }
+    .preset-btn:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .preset-btn.active-preset {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
     .preset-btn .p-top { display: flex; align-items: baseline; gap: 5px; }
     .preset-btn .p-code { font-size: 12px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
     .preset-btn .p-name { font-size: 9px; color: var(--muted); }
@@ -491,7 +621,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      min-width: 116px;
+      min-width: 118px;
       flex-shrink: 0;
     }
     .action-tile {
@@ -501,7 +631,7 @@
       justify-content: center;
       gap: 5px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 9px;
       background: var(--surface);
       color: var(--text);
       font-family: inherit;
@@ -513,14 +643,14 @@
       white-space: nowrap;
       padding: 0 12px;
     }
-    .action-tile:hover { border-color: var(--border-strong); background: var(--bg); color: var(--ink); }
+    .action-tile:hover { border-color: var(--border-strong); background: var(--surface-2); color: var(--ink); }
     .action-tile.primary {
-      background: var(--ink);
-      border-color: var(--ink);
+      background: var(--accent);
+      border-color: var(--accent);
       color: #fff;
       font-weight: 600;
     }
-    .action-tile.primary:hover { background: #333330; border-color: #333330; color: #fff; }
+    .action-tile.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
 
     /* 모바일 */
     @media (max-width: 720px) {
@@ -530,6 +660,7 @@
       .right-panel { padding: 20px 16px; overflow: visible; }
       .result-box .r-value { font-size: 30px; }
       .diagram-area { min-height: 220px; }
+      .header-caption { display: none; }
     }
   </style>
 </head>
@@ -541,7 +672,18 @@
     <h1>양장 표지 사이즈 제너레이터</h1>
     <span class="brand">Roseshaker</span>
   </div>
-  <span class="header-right">2015.6.12 가이드 기준</span>
+  <div class="header-right">
+    <span class="header-caption">2015.6.12 가이드 기준</span>
+    <button class="theme-toggle" onclick="toggleTheme()" title="라이트/다크 모드 전환" aria-label="라이트/다크 모드 전환">
+      <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+    </button>
+  </div>
 </header>
 
 <div class="app-body">
@@ -682,7 +824,7 @@
     </div>
 
     <!-- 결과 (기본 숨김) -->
-    <div id="result-area" style="display:none; display:none; flex:1; flex-direction:column; gap:14px; min-height:0;">
+    <div id="result-area" style="display:none; flex:1; flex-direction:column; gap:12px; min-height:0;">
 
       <!-- 총 사이즈 -->
       <div class="result-nums-row">
@@ -730,6 +872,29 @@
 </div><!-- /app-body -->
 
 <script>
+  /* ── 테마 ── */
+  const THEME_KEY = 'yangjan-theme';
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (lastCalc) {
+      const { panelW, spine, panelH, glue } = lastCalc;
+      drawDiagram('diagram-svg-wrap', panelW, spine, panelW, panelH, glue);
+    }
+  }
+  function toggleTheme() {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+  }
+  (function initTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      if (!localStorage.getItem(THEME_KEY)) applyTheme(e.matches ? 'dark' : 'light');
+    });
+  })();
+
   /* ── 판형 프리셋 데이터 ── */
   const PRESETS = [
     { code: 'A5',   name: '국판',    w: 148, h: 210, use: '에세이 · 소설 · 단행본' },
@@ -783,7 +948,13 @@
 
   /* ── 슬라이더 ── */
   function syncSlider(inputId, labelId, unit) {
-    document.getElementById(labelId).textContent = parseFloat(document.getElementById(inputId).value) + unit;
+    const el = document.getElementById(inputId);
+    document.getElementById(labelId).textContent = parseFloat(el.value) + unit;
+    updateRangeFill(el);
+  }
+  function updateRangeFill(el) {
+    const p = ((el.value - el.min) / (el.max - el.min)) * 100;
+    el.style.background = `linear-gradient(to right, var(--accent) ${p}%, var(--track) ${p}%)`;
   }
 
   /* ── 포맷 ── */
@@ -801,9 +972,6 @@
       totalW: glue + panelW + spine + panelW + glue,
       totalH: glue + panelH + glue,
       tab: 'gak',
-      labelBack: `뒤표지\n책가로+8`,
-      labelSpine: `책등\n두께+4`,
-      labelFront: `앞표지\n책가로+8`,
     });
   }
 
@@ -821,14 +989,11 @@
       totalW: glue + panelW + spine + panelW + glue,
       totalH: glue + panelH + glue,
       tab: 'hwan',
-      labelBack: `뒤표지\n가로+${3+board+8}`,
-      labelSpine: `책등\n두께+${extra}`,
-      labelFront: `앞표지\n가로+${3+board+8}`,
     });
   }
 
   /* ── 결과 표시 ── */
-  function showResult({ panelW, spine, panelH, glue, totalW, totalH, tab, labelBack, labelSpine, labelFront }) {
+  function showResult({ panelW, spine, panelH, glue, totalW, totalH, tab }) {
     lastCalc = { panelW, spine, panelH, glue, totalW, totalH, tab };
 
     document.getElementById('empty-state').style.display = 'none';
@@ -873,8 +1038,30 @@
     ).join('') + `<span class="bd-eq">=</span><span class="bd-total">${total}</span>`;
   }
 
+  /* ── 도식 팔레트 (테마 연동 / 인쇄 고정) ── */
+  const PRINT_DG = {
+    canvas: '#F3F1EC', canvasStroke: '#E0DDD5',
+    glue: '#EDEAE3',   glueStroke: '#DBD7CE',   glueText: '#A59F94',
+    panel: '#E7E4DD',  panelStroke: '#D2CDC3',  panelText: '#6B655B',
+    spine: '#C7C0B5',  spineStroke: '#ACA497',  spineText: '#3A342B',
+    tick: '#C9C4BA',   dimText: '#8F8B83',      totalText: '#37352F',
+  };
+  function dgColors(forPrint) {
+    if (forPrint) return PRINT_DG;
+    const cs = getComputedStyle(document.documentElement);
+    const v = name => cs.getPropertyValue(name).trim();
+    return {
+      canvas: v('--dg-canvas'),  canvasStroke: v('--dg-canvas-stroke'),
+      glue: v('--dg-glue'),      glueStroke: v('--dg-glue-stroke'),    glueText: v('--dg-glue-text'),
+      panel: v('--dg-panel'),    panelStroke: v('--dg-panel-stroke'),  panelText: v('--dg-panel-text'),
+      spine: v('--dg-spine'),    spineStroke: v('--dg-spine-stroke'),  spineText: v('--dg-spine-text'),
+      tick: v('--dg-tick'),      dimText: v('--dg-dim-text'),          totalText: v('--dg-total-text'),
+    };
+  }
+
   /* ── SVG 공용 빌더 (화면·인쇄 공유) ── */
   function buildSVGStr(backW, spineW, frontW, coverH, glue, W, H, forPrint) {
+    const P = dgColors(forPrint);
     const totalMm  = glue + backW + spineW + frontW + glue;
     const totalHMm = glue + coverH + glue;
     const S  = Math.min((W - 60) / totalMm, (H - 50) / totalHMm);
@@ -886,29 +1073,29 @@
     const r = (x,y,w,h,fill,stroke) =>
       `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="1" rx="1"/>`;
     const tx = (x,y,s,anchor,size,color,weight) =>
-      `<text x="${x}" y="${y}" text-anchor="${anchor||'middle'}" font-size="${size||10}" fill="${color||'#777'}" font-weight="${weight||'normal'}" font-family="Helvetica Neue,Arial,sans-serif">${s}</text>`;
+      `<text x="${x}" y="${y}" text-anchor="${anchor||'middle'}" font-size="${size||10}" fill="${color||P.dimText}" font-weight="${weight||'normal'}" font-family="Pretendard,Helvetica Neue,Arial,sans-serif">${s}</text>`;
     const tick = (x,y,w,label,sz) => {
       const m = x + w/2;
-      return `<line x1="${x}" y1="${y}" x2="${x+w}" y2="${y}" stroke="#C9C4BA" stroke-width="1"/>
-              <line x1="${x}" y1="${y}" x2="${x}" y2="${y-5}" stroke="#C9C4BA" stroke-width="1"/>
-              <line x1="${x+w}" y1="${y}" x2="${x+w}" y2="${y-5}" stroke="#C9C4BA" stroke-width="1"/>
-              ${tx(m, y+12, label, 'middle', sz||9, '#8F8B83')}`;
+      return `<line x1="${x}" y1="${y}" x2="${x+w}" y2="${y}" stroke="${P.tick}" stroke-width="1"/>
+              <line x1="${x}" y1="${y}" x2="${x}" y2="${y-5}" stroke="${P.tick}" stroke-width="1"/>
+              <line x1="${x+w}" y1="${y}" x2="${x+w}" y2="${y-5}" stroke="${P.tick}" stroke-width="1"/>
+              ${tx(m, y+12, label, 'middle', sz||9, P.dimText)}`;
     };
 
     let c = '';
-    c += r(ox, oy, tw, th, '#F3F1EC', '#E0DDD5');
-    c += r(ox, oy, gx, th, '#EDEAE3', '#DBD7CE');
-    c += r(ox+tw-gx, oy, gx, th, '#EDEAE3', '#DBD7CE');
-    c += r(ox+gx, oy+gh, bw, ph, '#E7E4DD', '#D2CDC3');
-    c += r(ox+gx+bw, oy+gh, sw, ph, '#C7C0B5', '#ACA497');
-    c += r(ox+gx+bw+sw, oy+gh, fw, ph, '#E7E4DD', '#D2CDC3');
+    c += r(ox, oy, tw, th, P.canvas, P.canvasStroke);
+    c += r(ox, oy, gx, th, P.glue, P.glueStroke);
+    c += r(ox+tw-gx, oy, gx, th, P.glue, P.glueStroke);
+    c += r(ox+gx, oy+gh, bw, ph, P.panel, P.panelStroke);
+    c += r(ox+gx+bw, oy+gh, sw, ph, P.spine, P.spineStroke);
+    c += r(ox+gx+bw+sw, oy+gh, fw, ph, P.panel, P.panelStroke);
 
-    c += tx(ox+gx+bw/2, oy+gh+ph/2+4, '뒤표지', 'middle', Math.min(11, bw/4), '#6B655B');
-    if (sw > 12) c += tx(ox+gx+bw+sw/2, oy+gh+ph/2+4, '책등', 'middle', Math.min(10, sw/2.5), '#3A342B', '700');
-    c += tx(ox+gx+bw+sw+fw/2, oy+gh+ph/2+4, '앞표지', 'middle', Math.min(11, fw/4), '#6B655B');
+    c += tx(ox+gx+bw/2, oy+gh+ph/2+4, '뒤표지', 'middle', Math.min(11, bw/4), P.panelText);
+    if (sw > 12) c += tx(ox+gx+bw+sw/2, oy+gh+ph/2+4, '책등', 'middle', Math.min(10, sw/2.5), P.spineText, '700');
+    c += tx(ox+gx+bw+sw+fw/2, oy+gh+ph/2+4, '앞표지', 'middle', Math.min(11, fw/4), P.panelText);
     if (gx > 10) {
-      c += tx(ox+gx/2, oy+th/2, '풀칠', 'middle', 8, '#A59F94');
-      c += tx(ox+tw-gx/2, oy+th/2, '풀칠', 'middle', 8, '#A59F94');
+      c += tx(ox+gx/2, oy+th/2, '풀칠', 'middle', 8, P.glueText);
+      c += tx(ox+tw-gx/2, oy+th/2, '풀칠', 'middle', 8, P.glueText);
     }
 
     const dy = oy + th + 6;
@@ -920,15 +1107,15 @@
 
     const fy = oy + th + 38;
     if (fy < H - 4) {
-      c += `<line x1="${ox}" y1="${fy}" x2="${ox+tw}" y2="${fy}" stroke="#BAB5AC" stroke-width="1" stroke-dasharray="3,3"/>`;
-      c += tx(ox+tw/2, fy+12, `총 가로 ${fmt(totalMm)}mm`, 'middle', 10, '#37352F', '700');
+      c += `<line x1="${ox}" y1="${fy}" x2="${ox+tw}" y2="${fy}" stroke="${P.tick}" stroke-width="1" stroke-dasharray="3,3"/>`;
+      c += tx(ox+tw/2, fy+12, `총 가로 ${fmt(totalMm)}mm`, 'middle', 10, P.totalText, '700');
     }
     const rx2 = ox + tw + 12;
     if (rx2 + 30 < W) {
-      c += `<line x1="${rx2}" y1="${oy+gh}" x2="${rx2}" y2="${oy+gh+ph}" stroke="#C9C4BA" stroke-width="1"/>`;
-      c += `<line x1="${rx2-4}" y1="${oy+gh}" x2="${rx2}" y2="${oy+gh}" stroke="#C9C4BA" stroke-width="1"/>`;
-      c += `<line x1="${rx2-4}" y1="${oy+gh+ph}" x2="${rx2}" y2="${oy+gh+ph}" stroke="#C9C4BA" stroke-width="1"/>`;
-      c += tx(rx2+5, oy+gh+ph/2+4, `${fmt(coverH)}mm`, 'start', 9, '#8F8B83');
+      c += `<line x1="${rx2}" y1="${oy+gh}" x2="${rx2}" y2="${oy+gh+ph}" stroke="${P.tick}" stroke-width="1"/>`;
+      c += `<line x1="${rx2-4}" y1="${oy+gh}" x2="${rx2}" y2="${oy+gh}" stroke="${P.tick}" stroke-width="1"/>`;
+      c += `<line x1="${rx2-4}" y1="${oy+gh+ph}" x2="${rx2}" y2="${oy+gh+ph}" stroke="${P.tick}" stroke-width="1"/>`;
+      c += tx(rx2+5, oy+gh+ph/2+4, `${fmt(coverH)}mm`, 'start', 9, P.dimText);
     }
 
     const attrs = forPrint
@@ -1181,13 +1368,17 @@
       document.getElementById('hwan-board-val').textContent = '2.5mm';
       document.getElementById('hwan-extra').value = '6';
       document.getElementById('hwan-extra-val').textContent = '6mm';
+      updateRangeFill(document.getElementById('hwan-board'));
+      updateRangeFill(document.getElementById('hwan-extra'));
     }
     document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active-preset'));
     showEmpty();
   }
 
-  /* ── 초기화 ── */
+  /* ── 초기 렌더 ── */
   renderPresets();
+  updateRangeFill(document.getElementById('hwan-board'));
+  updateRangeFill(document.getElementById('hwan-extra'));
 
   /* ── AI 템플릿 SVG 내보내기 ── */
   function exportTemplate() {
